@@ -6,12 +6,9 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Análisis Estadístico Avanzado (Completo)</title>
 
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-    <!-- html2canvas + jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- SheetJS para Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <style>
@@ -20,7 +17,6 @@
             --bg: #f4f6fb;
             --card: #ffffff;
             --muted: #7f8c8d;
-            --formula-red: #e74c3c;
         }
 
         body {
@@ -128,10 +124,20 @@
             display: block
         }
 
+        /* Contenedor principal para la sección de Posición */
+        #posicion .section-title {
+            color: #2c3e50;
+            font-size: 1.1em;
+            margin: 15px 0 8px 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
+        }
+
         .results-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 12px
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
         }
 
         .card {
@@ -144,14 +150,6 @@
         .card strong {
             display: block;
             margin-bottom: 6px
-        }
-
-        .formula {
-            font-family: monospace;
-            font-size: 0.9em;
-            color: var(--formula-red);
-            display: block;
-            margin-top: 6px
         }
 
         #freqTable {
@@ -259,7 +257,7 @@
         </div>
 
         <div id="posicion" class="tab-pane-stats">
-            <div id="posicionResults" class="results-grid">
+            <div id="posicionResults">
                 <p>Ingresa datos y presiona <b>Procesar</b>.</p>
             </div>
         </div>
@@ -335,23 +333,31 @@
             if (arr.length === 0) { alert('No hay datos válidos'); return; }
 
             const n = arr.length;
+            const min = arr[0];
+            const max = arr[n - 1];
+            // Rango
+            const rango = max - min;
             const suma = arr.reduce((s, x) => s + x, 0);
             const media = suma / n;
-            // mediana
+
+            // Mediana
             let mediana = 0;
             if (n % 2 === 1) mediana = arr[(n - 1) / 2];
             else mediana = (arr[n / 2 - 1] + arr[n / 2]) / 2;
-            // moda
+
+            // Moda
             const freq = {};
             arr.forEach(v => freq[v] = (freq[v] || 0) + 1);
             const maxF = Math.max(...Object.values(freq));
             const modas = Object.keys(freq).filter(k => freq[k] === maxF).map(x => isFinite(parseFloat(x)) ? parseFloat(x) : x);
             const modaText = (maxF === 1) ? 'No hay moda clara' : modas.join(', ');
-            // varianza poblacional
+
+            // Varianza poblacional
             const varP = arr.reduce((s, x) => s + Math.pow(x - media, 2), 0) / n;
             const sdP = Math.sqrt(varP);
-            // cuartiles (interpolación simple: método (n+1) posicion)
-            function percentile(p) {
+
+            // Cuartiles, Deciles, Percentiles (interpolación simple: método (n+1) posicion)
+            function percentileSimple(p) {
                 const pos = (p / 100) * (n + 1);
                 if (pos <= 1) return arr[0];
                 if (pos >= n) return arr[n - 1];
@@ -359,44 +365,75 @@
                 const frac = pos - Math.floor(pos);
                 return arr[i] + frac * (arr[i + 1] - arr[i]);
             }
-            const q1 = percentile(25), q2 = percentile(50), q3 = percentile(75);
 
-            // Mostrar (con fórmulas en rojo)
+            // Cuartiles
+            const q1 = percentileSimple(25);
+            const q2 = percentileSimple(50);
+            const q3 = percentileSimple(75);
+
+            // Deciles
+            const deciles = [];
+            for (let k = 1; k <= 9; k++) {
+                deciles.push(percentileSimple(k * 10));
+            }
+
+            // Percentil adicional
+            const p90 = percentileSimple(90);
+
+            // =========================================================================
+            // MOSTRAR RESULTADOS
+            // =========================================================================
+
+            // Resumen
             document.getElementById('resumenResults').innerHTML = `
-    <div class="card"><strong>Media (x̄)</strong>${media.toFixed(3)}
-      <span class="formula">x̄ = Σx / n</span></div>
-    <div class="card"><strong>Mediana (Me)</strong>${mediana}
-      <span class="formula">Método (serie ordenada): valor central</span></div>
-    <div class="card"><strong>Moda (Mo)</strong>${modaText}
-      <span class="formula">Mo = valor con mayor frecuencia</span></div>
-  `;
+                <div class="card"><strong>Media (x̄)</strong>${media.toFixed(3)}</div>
+                <div class="card"><strong>Mediana (Me)</strong>${mediana.toFixed(3)}</div>
+                <div class="card"><strong>Moda (Mo)</strong>${modaText}</div>
+            `;
+
+            // Dispersión
             document.getElementById('dispersionResults').innerHTML = `
-    <div class="card"><strong>Varianza poblacional (σ²)</strong>${varP.toFixed(3)}
-      <span class="formula">σ² = Σ(x - x̄)² / n</span></div>
-    <div class="card"><strong>Desviación (σ)</strong>${sdP.toFixed(3)}
-      <span class="formula">σ = √σ²</span></div>
-  `;
-            document.getElementById('posicionResults').innerHTML = `
-    <div class="card"><strong>Q1</strong>${q1.toFixed(3)}<span class="formula">Q1: posición ≈ (n+1)/4</span></div>
-    <div class="card"><strong>Q2 (Mediana)</strong>${q2.toFixed(3)}<span class="formula">Q2 = mediana</span></div>
-    <div class="card"><strong>Q3</strong>${q3.toFixed(3)}<span class="formula">Q3: posición ≈ 3(n+1)/4</span></div>
-  `;
+                <div class="card"><strong>Rango (R)</strong>${rango.toFixed(3)}</div>
+                <div class="card"><strong>Varianza poblacional (σ²)</strong>${varP.toFixed(3)}</div>
+                <div class="card"><strong>Desviación (σ)</strong>${sdP.toFixed(3)}</div>
+            `;
+
+            // Posición (Cuartiles, Deciles y Percentiles - ESTRUCTURADO)
+            let posicionHTML = `
+                <h4 class="section-title">Cuartiles (Q)</h4>
+                <div class="results-grid">
+                    <div class="card"><strong>Q1</strong>${q1.toFixed(3)}</div>
+                    <div class="card"><strong>Q2 (Me)</strong>${q2.toFixed(3)}</div>
+                    <div class="card"><strong>Q3</strong>${q3.toFixed(3)}</div>
+                </div>
+
+                <h4 class="section-title">Deciles (D)</h4>
+                <div class="results-grid">
+                    ${deciles.map((d, i) => `<div class="card"><strong>D${i + 1}</strong>${d.toFixed(3)}</div>`).join('')}
+                </div>
+
+                <h4 class="section-title">Otros Percentiles (P)</h4>
+                <div class="results-grid">
+                    <div class="card"><strong>P90</strong>${p90.toFixed(3)}</div>
+                </div>
+            `;
+            document.getElementById('posicionResults').innerHTML = posicionHTML;
 
             // Tabla de frecuencias simples y gráfico
             const unique = Object.keys(freq).sort((a, b) => parseFloat(a) - parseFloat(b));
             const values = unique.map(k => freq[k]);
             const labels = unique.map(k => k);
 
-            renderChart(labels, values, unique.map((u, i) => values.slice(0, i + 1)));
+            renderChart(labels, values, unique.map((u, i) => values.slice(0, i + 1).reduce((a, b) => a + b, 0)));
             document.getElementById('freqTableContainer').innerHTML = `
-    <h4>Frecuencias (serie simple)</h4>
-    <table id="freqTable">
-      <thead><tr><th>Valor</th><th>f</th></tr></thead>
-      <tbody>
-        ${labels.map((lab, i) => `<tr><td>${lab}</td><td>${values[i]}</td></tr>`).join('')}
-      </tbody>
-    </table>
-  `;
+                <h4>Frecuencias (serie simple)</h4>
+                <table id="freqTable">
+                    <thead><tr><th>Valor</th><th>f</th></tr></thead>
+                    <tbody>
+                        ${labels.map((lab, i) => `<tr><td>${lab}</td><td>${values[i]}</td></tr>`).join('')}
+                    </tbody>
+                </table>
+            `;
             document.getElementById('dataStatus').innerHTML = `<span style="color:green">${n} datos procesados (simple)</span>`;
         }
 
@@ -422,14 +459,18 @@
                 return { li: Math.min(li, ls), ls: Math.max(li, ls) };
             });
 
-            // verificar amplitudes (puede variar; para fórmulas asumimos i = ls - li de la clase modal o primera)
-            const amplitudes = clases.map(c => c.ls - c.li);
-            // Si no todas iguales, usamos i de la clase modal al calcular (esto es lo que suelen enseñar)
             const N = frecs.reduce((s, f) => s + f, 0);
             if (N === 0) { alert('N = 0'); return; }
 
+            // Rango e Intervalo (Amplitud)
+            const min = clases[0].li;
+            const max = clases[clases.length - 1].ls;
+            const rango = max - min;
+            const intervalo_i = +(clases[0].ls - clases[0].li).toFixed(6);
+
             // puntos medios
             const pm = clases.map(c => +((c.li + c.ls) / 2).toFixed(6));
+            const pm_avg = pm.reduce((s, x, idx) => s + x * frecs[idx], 0) / N;
 
             // frecuencia acumulada (Fa)
             const Fa = [];
@@ -444,23 +485,29 @@
             const desviacion = Math.sqrt(varianza);
 
             // -------------------------
-            // Mediana agrupada (fórmula exacta del cuaderno)
-            // Me = Li + ((N/2 - Fa_prev) / f_m) * i
+            // Cálculo de Posición (Deciles, Cuartiles, Percentiles)
             // -------------------------
-            const mitad = N / 2;
-            const idxMe = Fa.findIndex(v => v >= mitad);
-            const idxMed = idxMe === -1 ? Fa.length - 1 : idxMe;
-            const Li_me = clases[idxMed].li;
-            const Fa_prev = idxMed === 0 ? 0 : Fa[idxMed - 1];
-            const f_m = frecs[idxMed];
-            const i_med = clases[idxMed].ls - clases[idxMed].li; // ancho de clase de la clase mediana
-            const mediana = (f_m === 0 || i_med === 0) ? null : (Li_me + ((mitad - Fa_prev) / f_m) * i_med);
+            function positionAgrupado(k, divisor) {
+                const pos = (k * N) / divisor;
+                const idx = Fa.findIndex(v => v >= pos);
+                const idxq = idx === -1 ? Fa.length - 1 : idx;
 
-            // -------------------------
-            // Moda agrupada (Pearson/interpolada)
-            // Mo = Li + (d1/(d1+d2)) * i
-            // d1 = f_modal - f_prev, d2 = f_modal - f_next
-            // -------------------------
+                if (N === 0 || idxq < 0) return null;
+
+                const Li_q = clases[idxq].li;
+                const Fa_prev_q = idxq === 0 ? 0 : Fa[idxq - 1];
+                const f_q = frecs[idxq];
+                const i_q = clases[idxq].ls - clases[idxq].li;
+
+                if (f_q === 0 || i_q === 0) return pm[idxq];
+
+                return Li_q + ((pos - Fa_prev_q) / f_q) * i_q;
+            }
+
+            // Mediana (P50/Q2/D5)
+            const mediana = positionAgrupado(50, 100);
+
+            // Moda agrupada (fórmula de interpolación)
             const maxF = Math.max(...frecs);
             const idxModa = frecs.indexOf(maxF);
             const Li_mo = clases[idxModa].li;
@@ -472,82 +519,88 @@
             const i_mo = clases[idxModa].ls - clases[idxModa].li;
             const moda = ((d1 + d2) === 0 || i_mo === 0) ? pm[idxModa] : (Li_mo + (d1 / (d1 + d2)) * i_mo);
 
-            // -------------------------
-            // Cuartiles agrupados (Qk = Li + ((kN/4 - Fa_prev) / f_k) * i)
-            // -------------------------
-            function cuartilAgrupado(k) {
-                const pos = (k * N) / 4;
-                const idx = Fa.findIndex(v => v >= pos);
-                const idxq = idx === -1 ? Fa.length - 1 : idx;
-                const Li_q = clases[idxq].li;
-                const Fa_prev_q = idxq === 0 ? 0 : Fa[idxq - 1];
-                const f_q = frecs[idxq];
-                const i_q = clases[idxq].ls - clases[idxq].li;
-                if (f_q === 0 || i_q === 0) return null;
-                return Li_q + ((pos - Fa_prev_q) / f_q) * i_q;
-            }
-            const q1 = cuartilAgrupado(1);
-            const q2 = cuartilAgrupado(2);
-            const q3 = cuartilAgrupado(3);
+            // Cuartiles
+            const q1 = positionAgrupado(25, 100);
+            const q3 = positionAgrupado(75, 100);
 
-            // -------------------------
-            // Mostrar resultados con fórmulas (en rojo) y detalles numéricos
-            // -------------------------
+            // Deciles
+            const deciles = [];
+            for (let k = 1; k <= 9; k++) {
+                deciles.push(positionAgrupado(k, 10));
+            }
+
+            // Percentil adicional
+            const p95 = positionAgrupado(95, 100);
+
+
+            // =========================================================================
+            // MOSTRAR RESULTADOS
+            // =========================================================================
+
             // Resumen
             document.getElementById('resumenResults').innerHTML = `
-    <div class="card"><strong>Media Agrupada (x̄)</strong>${isFinite(media) ? media.toFixed(3) : 'N/A'}
-      <span class="formula">x̄ = Σ(Pm · f) / N</span></div>
-
-    <div class="card"><strong>Mediana Agrupada (Me)</strong>${mediana !== null ? mediana.toFixed(3) : 'N/A'}
-      <span class="formula">Me = Li + ((N/2 − Fa_prev) / f_m) · i</span>
-    </div>
-
-    <div class="card"><strong>Moda Agrupada (Mo)</strong>${isFinite(moda) ? (Number.isFinite(moda) ? moda.toFixed(3) : moda) : 'N/A'}
-      <span class="formula">Mo = Li + ( d1 / (d1 + d2) ) · i</span>
-    </div>
-  `;
+                <div class="card"><strong>Media Agrupada (x̄)</strong>${isFinite(media) ? media.toFixed(3) : 'N/A'}</div>
+                <div class="card"><strong>Mediana (Me)</strong>${mediana !== null ? mediana.toFixed(3) : 'N/A'}</div>
+                <div class="card"><strong>Moda (Mo)</strong>${isFinite(moda) ? (Number.isFinite(moda) ? moda.toFixed(3) : moda) : 'N/A'}</div>
+            `;
 
             // Dispersión
             document.getElementById('dispersionResults').innerHTML = `
-    <div class="card"><strong>Varianza (agrupada)</strong>${isFinite(varianza) ? varianza.toFixed(3) : 'N/A'}
-      <span class="formula">σ² = Σ[f · (Pm − x̄)²] / N</span></div>
-    <div class="card"><strong>Desviación (σ)</strong>${isFinite(desviacion) ? desviacion.toFixed(3) : 'N/A'}
-      <span class="formula">σ = √σ²</span></div>
-  `;
+                <div class="card"><strong>Rango (R)</strong>${rango.toFixed(3)}</div>
+                <div class="card"><strong>Amplitud (i)</strong>${intervalo_i.toFixed(3)}</div>
+                <div class="card"><strong>Varianza (σ²)</strong>${isFinite(varianza) ? varianza.toFixed(3) : 'N/A'}</div>
+                <div class="card"><strong>Desviación (σ)</strong>${isFinite(desviacion) ? desviacion.toFixed(3) : 'N/A'}</div>
+            `;
 
-            // Posición (cuartiles)
-            document.getElementById('posicionResults').innerHTML = `
-    <div class="card"><strong>Q1</strong>${q1 !== null ? q1.toFixed(3) : 'N/A'}
-      <span class="formula">Q1 = Li + ((N/4 − Fa_prev) / f₁) · i</span></div>
-    <div class="card"><strong>Q2 (Mediana)</strong>${q2 !== null ? q2.toFixed(3) : 'N/A'}
-      <span class="formula">Q2 = Me (ver arriba)</span></div>
-    <div class="card"><strong>Q3</strong>${q3 !== null ? q3.toFixed(3) : 'N/A'}
-      <span class="formula">Q3 = Li + ((3N/4 − Fa_prev) / f₃) · i</span></div>
-  `;
+            // Posición (Cuartiles, Deciles y Percentiles - ESTRUCTURADO)
+            let posicionHTML = `
+                <h4 class="section-title">Punto Medio y Amplitud</h4>
+                <div class="results-grid">
+                    <div class="card"><strong>Promedio de Puntos Medios (P̄m)</strong>${pm_avg.toFixed(3)}</div>
+                    <div class="card"><strong>Amplitud del Intervalo (i)</strong>${intervalo_i.toFixed(3)}</div>
+                </div>
+
+                <h4 class="section-title">Cuartiles (Q)</h4>
+                <div class="results-grid">
+                    <div class="card"><strong>Q1</strong>${q1 !== null ? q1.toFixed(3) : 'N/A'}</div>
+                    <div class="card"><strong>Q2 (Me)</strong>${mediana !== null ? mediana.toFixed(3) : 'N/A'}</div>
+                    <div class="card"><strong>Q3</strong>${q3 !== null ? q3.toFixed(3) : 'N/A'}</div>
+                </div>
+
+                <h4 class="section-title">Deciles (D)</h4>
+                <div class="results-grid">
+                    ${deciles.map((d, i) => `<div class="card"><strong>D${i + 1}</strong>${d !== null ? d.toFixed(3) : 'N/A'}</div>`).join('')}
+                </div>
+
+                <h4 class="section-title">Otros Percentiles (P)</h4>
+                <div class="results-grid">
+                    <div class="card"><strong>P95</strong>${p95 !== null ? p95.toFixed(3) : 'N/A'}</div>
+                </div>
+            `;
+            document.getElementById('posicionResults').innerHTML = posicionHTML;
 
             // Tabla de frecuencias (mostrando Fa y Pm)
             let table = `<h4>Tabla de Frecuencias Agrupadas</h4>
-    <table id="freqTable">
-      <thead><tr><th>Clase (Li - Ls)</th><th>f</th><th>Fa</th><th>Punto medio (Xm)</th><th>fr %</th></tr></thead>
-      <tbody>`;
+                <table id="freqTable">
+                    <thead><tr><th>Clase (L<sub>i</sub> - L<sub>s</sub>)</th><th>f</th><th>F<sub>a</sub></th><th>Punto medio (X<sub>m</sub>)</th><th>fr %</th></tr></thead>
+                    <tbody>`;
             for (let idx = 0; idx < clases.length; idx++) {
                 const c = clases[idx];
                 const frp = (frecs[idx] / N) * 100;
                 table += `<tr>
-      <td>${c.li} - ${c.ls}</td>
-      <td>${frecs[idx]}</td>
-      <td>${Fa[idx]}</td>
-      <td>${pm[idx]}</td>
-      <td>${frp.toFixed(2)}%</td>
-    </tr>`;
+                    <td>${c.li} - ${c.ls}</td>
+                    <td>${frecs[idx]}</td>
+                    <td>${Fa[idx]}</td>
+                    <td>${pm[idx].toFixed(3)}</td>
+                    <td>${frp.toFixed(2)}%</td>
+                </tr>`;
             }
             table += `</tbody>
-    <tfoot><tr><td colspan="2"><strong>TOTAL</strong></td><td><strong>${N}</strong></td><td></td><td><strong>100%</strong></td></tr></tfoot>
-    </table>`;
+                <tfoot><tr><td colspan="2"><strong>TOTAL</strong></td><td><strong>${N}</strong></td><td></td><td><strong>100%</strong></td></tr></tfoot>
+                </table>`;
             document.getElementById('freqTableContainer').innerHTML = table;
 
             // Grafico (histograma + polígono + ojiva)
-            // Usamos etiquetas como "Li-Ls" para el eje X; el polígono y la ojiva usan los mismos puntos.
             renderChart(clases.map(c => `${c.li}-${c.ls}`), frecs, Fa);
             document.getElementById('dataStatus').innerHTML = `<span style="color:green">${N} datos agrupados procesados.</span>`;
         }
@@ -566,7 +619,7 @@
                     datasets: [
                         {
                             type: 'bar',
-                            label: 'Frecuencia (f)',
+                            label: 'Frecuencia (f) / Histograma',
                             data: freqs,
                             backgroundColor: 'rgba(52,152,219,0.75)',
                             borderColor: 'rgba(52,152,219,1)',
@@ -589,7 +642,8 @@
                             borderDash: [6, 4],
                             tension: 0.25,
                             fill: false,
-                            pointRadius: 3
+                            pointRadius: 3,
+                            yAxisID: 'y1'
                         }
                     ]
                 },
@@ -597,7 +651,16 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { beginAtZero: true, title: { display: true, text: 'Frecuencia' } },
+                        y: { beginAtZero: true, title: { display: true, text: 'Frecuencia Absoluta (f)' } },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'Frecuencia Acumulada (Fa)', color: '#e74c3c' },
+                            beginAtZero: true,
+                            max: fac.length > 0 ? fac[fac.length - 1] : undefined
+                        },
                         x: { title: { display: true, text: 'Clases' } }
                     },
                     plugins: {
