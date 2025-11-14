@@ -152,20 +152,24 @@
             margin-bottom: 6px
         }
 
-        #freqTable {
+        #freqTable,
+        #simpleDispersionTable {
             width: 100%;
             border-collapse: collapse;
             margin-top: 8px
         }
 
         #freqTable th,
-        #freqTable td {
+        #freqTable td,
+        #simpleDispersionTable th,
+        #simpleDispersionTable td {
             border: 1px solid #e9f1f8;
             padding: 8px;
             text-align: center
         }
 
-        #freqTable th {
+        #freqTable th,
+        #simpleDispersionTable th {
             background: var(--primary);
             color: white
         }
@@ -240,7 +244,7 @@
             <button class="tab-btn-stats active" data-tab="resumen" onclick="activateTab(event)">Resumen</button>
             <button class="tab-btn-stats" data-tab="dispersion" onclick="activateTab(event)">Dispersión</button>
             <button class="tab-btn-stats" data-tab="posicion" onclick="activateTab(event)">Posición</button>
-            <button class="tab-btn-stats" data-tab="frecuencias" onclick="activateTab(event)">Frecuencias /
+            <button class="tab-btn-stats" data-tab="frecuencias" onclick="activateTab(event)">Tabla /
                 Gráfica</button>
         </div>
 
@@ -352,9 +356,14 @@
             const modas = Object.keys(freq).filter(k => freq[k] === maxF).map(x => isFinite(parseFloat(x)) ? parseFloat(x) : x);
             const modaText = (maxF === 1) ? 'No hay moda clara' : modas.join(', ');
 
-            // Varianza poblacional
-            const varP = arr.reduce((s, x) => s + Math.pow(x - media, 2), 0) / n;
+            // Varianza poblacional y Desviación Estándar
+            const sumSqDev = arr.reduce((s, x) => s + Math.pow(x - media, 2), 0);
+            const varP = sumSqDev / n;
             const sdP = Math.sqrt(varP);
+
+            // Desviación Media (DM)
+            const sumAbsDev = arr.reduce((s, x) => s + Math.abs(x - media), 0);
+            const dm = sumAbsDev / n;
 
             // Cuartiles, Deciles, Percentiles (interpolación simple: método (n+1) posicion)
             function percentileSimple(p) {
@@ -386,16 +395,17 @@
 
             // Resumen
             document.getElementById('resumenResults').innerHTML = `
-                <div class="card"><strong>Media (x̄)</strong>${media.toFixed(3)}</div>
+                <div class="card"><strong>Media Aritmética (x̄)</strong>${media.toFixed(3)}</div>
                 <div class="card"><strong>Mediana (Me)</strong>${mediana.toFixed(3)}</div>
                 <div class="card"><strong>Moda (Mo)</strong>${modaText}</div>
             `;
 
-            // Dispersión
+            // Dispersión (NUEVA ESTRUCTURA)
             document.getElementById('dispersionResults').innerHTML = `
                 <div class="card"><strong>Rango (R)</strong>${rango.toFixed(3)}</div>
+                <div class="card"><strong>Desviación Media (DM)</strong>${dm.toFixed(3)}</div>
                 <div class="card"><strong>Varianza poblacional (σ²)</strong>${varP.toFixed(3)}</div>
-                <div class="card"><strong>Desviación (σ)</strong>${sdP.toFixed(3)}</div>
+                <div class="card"><strong>Desviación Estándar (σ)</strong>${sdP.toFixed(3)}</div>
             `;
 
             // Posición (Cuartiles, Deciles y Percentiles - ESTRUCTURADO)
@@ -419,21 +429,61 @@
             `;
             document.getElementById('posicionResults').innerHTML = posicionHTML;
 
-            // Tabla de frecuencias simples y gráfico
+            // =========================================================================
+            // TABLA DE DISPERSIÓN SIMPLE (Reemplaza tabla de frecuencias simple)
+            // =========================================================================
+            let table = `
+                <h4>Tabla de Dispersión (Serie Simple)</h4>
+                <table id="simpleDispersionTable">
+                    <thead>
+                        <tr>
+                            <th>x (Dato)</th>
+                            <th>x - x̄</th>
+                            <th>|x - x̄|</th>
+                            <th>(x - x̄)²</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            let totalX = 0, totalAbsDev = 0, totalSqDev = 0;
+
+            // Recorre los datos originales (sin ordenar) o usa una copia de los ordenados
+            arr.forEach(x => {
+                const dev = x - media;
+                const absDev = Math.abs(dev);
+                const sqDev = Math.pow(dev, 2);
+
+                totalX += x;
+                totalAbsDev += absDev;
+                totalSqDev += sqDev;
+
+                table += `<tr>
+                    <td>${x.toFixed(3)}</td>
+                    <td>${dev.toFixed(3)}</td>
+                    <td>${absDev.toFixed(3)}</td>
+                    <td>${sqDev.toFixed(3)}</td>
+                </tr>`;
+            });
+
+            table += `</tbody>
+                <tfoot>
+                    <tr>
+                        <td><strong>Σ=${totalX.toFixed(3)}</strong></td>
+                        <td><strong>Σ≈0</strong></td>
+                        <td><strong>Σ=${totalAbsDev.toFixed(3)}</strong></td>
+                        <td><strong>Σ=${totalSqDev.toFixed(3)}</strong></td>
+                    </tr>
+                </tfoot>
+                </table>
+            `;
+            document.getElementById('freqTableContainer').innerHTML = table;
+
+
+            // Gráfico (mantengo el gráfico de barras/frecuencias para la visualización inicial de datos simples)
             const unique = Object.keys(freq).sort((a, b) => parseFloat(a) - parseFloat(b));
             const values = unique.map(k => freq[k]);
             const labels = unique.map(k => k);
 
             renderChart(labels, values, unique.map((u, i) => values.slice(0, i + 1).reduce((a, b) => a + b, 0)));
-            document.getElementById('freqTableContainer').innerHTML = `
-                <h4>Frecuencias (serie simple)</h4>
-                <table id="freqTable">
-                    <thead><tr><th>Valor</th><th>f</th></tr></thead>
-                    <tbody>
-                        ${labels.map((lab, i) => `<tr><td>${lab}</td><td>${values[i]}</td></tr>`).join('')}
-                    </tbody>
-                </table>
-            `;
             document.getElementById('dataStatus').innerHTML = `<span style="color:green">${n} datos procesados (simple)</span>`;
         }
 
@@ -483,6 +533,10 @@
             // varianza agrupada σ² = Σ[f * (Xm - x̄)²] / N
             const varianza = pm.reduce((s, x, idx) => s + frecs[idx] * Math.pow(x - media, 2), 0) / N;
             const desviacion = Math.sqrt(varianza);
+
+            // Desviación Media Agrupada (DM = Σ[f * |Xm - x̄|] / N)
+            const sumFabsDev = pm.reduce((s, x, idx) => s + frecs[idx] * Math.abs(x - media), 0);
+            const dm = sumFabsDev / N;
 
             // -------------------------
             // Cálculo de Posición (Deciles, Cuartiles, Percentiles)
@@ -544,12 +598,13 @@
                 <div class="card"><strong>Moda (Mo)</strong>${isFinite(moda) ? (Number.isFinite(moda) ? moda.toFixed(3) : moda) : 'N/A'}</div>
             `;
 
-            // Dispersión
+            // Dispersión (NUEVA ESTRUCTURA)
             document.getElementById('dispersionResults').innerHTML = `
                 <div class="card"><strong>Rango (R)</strong>${rango.toFixed(3)}</div>
                 <div class="card"><strong>Amplitud (i)</strong>${intervalo_i.toFixed(3)}</div>
+                <div class="card"><strong>Desviación Media (DM)</strong>${dm.toFixed(3)}</div>
                 <div class="card"><strong>Varianza (σ²)</strong>${isFinite(varianza) ? varianza.toFixed(3) : 'N/A'}</div>
-                <div class="card"><strong>Desviación (σ)</strong>${isFinite(desviacion) ? desviacion.toFixed(3) : 'N/A'}</div>
+                <div class="card"><strong>Desviación Estándar (σ)</strong>${isFinite(desviacion) ? desviacion.toFixed(3) : 'N/A'}</div>
             `;
 
             // Posición (Cuartiles, Deciles y Percentiles - ESTRUCTURADO)
@@ -672,13 +727,20 @@
         }
 
         /* =========================
-          Exportar Excel (usa tabla #freqTable)
+          Exportar Excel (usa tabla #freqTable o #simpleDispersionTable)
         =========================*/
         function exportToExcel() {
-            const table = document.getElementById('freqTable');
+            const type = document.getElementById('dataType').value;
+            let table;
+            if (type === 'simple') {
+                table = document.getElementById('simpleDispersionTable');
+            } else {
+                table = document.getElementById('freqTable');
+            }
+
             if (!table) { alert('No hay tabla para exportar'); return; }
-            const wb = XLSX.utils.table_to_book(table, { sheet: "Frecuencias" });
-            XLSX.writeFile(wb, "frecuencias.xlsx");
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Estadisticas" });
+            XLSX.writeFile(wb, "reporte_estadistico.xlsx");
         }
 
         /* =========================
