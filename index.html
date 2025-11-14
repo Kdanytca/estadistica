@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Análisis Estadístico Avanzado</title>
+    <title>Análisis Estadístico Avanzado (Simple y Agrupado) con Gráficos Chart.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -14,7 +15,7 @@
 
         /* Contenedor Principal */
         .statistics-container {
-            max-width: 950px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 30px;
             background-color: #ffffff;
@@ -29,7 +30,7 @@
             margin-bottom: 25px;
         }
 
-        /* Sección de Input */
+        /* Sección de Input - FLEXIBLE */
         .input-section {
             padding: 20px;
             border: 1px solid #c9c9c9;
@@ -38,7 +39,20 @@
             background-color: #eaf6ff;
         }
 
-        #dataInput {
+        .input-controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .input-area {
+            flex-grow: 1;
+        }
+
+        #dataInput,
+        #freqInput,
+        #intervalInput {
             width: 100%;
             padding: 12px;
             margin-top: 8px;
@@ -70,7 +84,7 @@
             font-weight: bold;
         }
 
-        /* Estilos de Pestañas */
+        /* Estilos de Pestañas y Resultados */
         .tab-controls-stats {
             display: flex;
             border-bottom: 3px solid #ccc;
@@ -95,7 +109,6 @@
             border-bottom: 3px solid #3498db;
         }
 
-        /* Contenido de Pestañas */
         .tab-pane-stats {
             display: none;
             padding: 15px 0;
@@ -116,7 +129,6 @@
             }
         }
 
-        /* Estilo de Cuadrícula para Resultados */
         .results-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -124,7 +136,8 @@
             margin-top: 15px;
         }
 
-        .results-grid>div {
+        .results-grid>div,
+        .results-position>div {
             background-color: #f0f3f6;
             padding: 18px;
             border-radius: 8px;
@@ -132,11 +145,8 @@
             transition: transform 0.2s;
         }
 
-        .results-grid>div:hover {
-            transform: translateY(-2px);
-        }
-
-        .results-grid strong {
+        .results-grid strong,
+        .results-position strong {
             display: block;
             font-size: 1.1em;
             color: #2c3e50;
@@ -152,7 +162,6 @@
             margin-top: 5px;
         }
 
-        /* Estilo de Cuadrícula para Posición */
         .results-position {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -160,28 +169,59 @@
             margin-top: 15px;
         }
 
-        .results-position h3 {
-            grid-column: 1 / -1;
+        /* Estilo para la Tabla de Frecuencias */
+        #freqTableContainer {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        #freqTable {
+            width: 100%;
+            border-collapse: collapse;
             margin-top: 10px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
-            color: #34495e;
         }
 
-        .results-position>div {
-            background-color: #f0f3f6;
-            padding: 18px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s;
+        #freqTable th,
+        #freqTable td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
         }
 
-        .results-position strong {
-            display: block;
-            font-size: 1.1em;
-            color: #2c3e50;
-            margin-bottom: 5px;
-            font-weight: 600;
+        #freqTable th {
+            background-color: #3498db;
+            color: white;
+            font-weight: bold;
+        }
+
+        #freqTable tr:nth-child(even) {
+            background-color: #f2f8ff;
+        }
+
+        /* Estilo para la Base de Datos de Gráficas */
+        .chart-data {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #fff3e0;
+            /* Color que resalta la base de datos */
+            border: 1px dashed #ff9800;
+            border-radius: 5px;
+        }
+
+        .chart-data pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        #chartContainer {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
         }
     </style>
 </head>
@@ -192,9 +232,28 @@
         <h2>Análisis Estadístico de Datos 📊</h2>
 
         <div class="input-section">
-            <label for="dataInput">Ingresa los datos separados por comas:</label>
-            <textarea id="dataInput" rows="4" placeholder="Ejemplo: 2, 4, 4, 4, 5, 5, 7, 9, 10"></textarea>
-            <button onclick="procesarDatos()">Procesar y Calcular</button>
+            <div class="input-controls">
+                <label for="dataType">Tipo de Serie:</label>
+                <select id="dataType" onchange="toggleInputMode()">
+                    <option value="simple">Serie Simple (Datos No Agrupados)</option>
+                    <option value="grouped">Serie Agrupada (Clases y Frecuencias)</option>
+                </select>
+                <button onclick="procesarDatos()">Procesar y Calcular</button>
+            </div>
+
+            <div id="simpleInput" class="input-area">
+                <label for="dataInput">Ingresa los **datos individuales** separados por comas:</label>
+                <textarea id="dataInput" rows="4" placeholder="Ejemplo: 2, 4, 4, 4, 5, 5, 7, 9, 10"></textarea>
+            </div>
+
+            <div id="groupedInput" class="input-area" style="display: none;">
+                <label for="intervalInput">Ingresa los **LÍMITES de los intervalos** (Ej: 1-10, 11-20, 21-30):</label>
+                <textarea id="intervalInput" rows="2" placeholder="Ejemplo: 1-5, 6-10, 11-15"></textarea>
+
+                <label for="freqInput">Ingresa las **FRECUENCIAS** (en el mismo orden) separadas por comas:</label>
+                <textarea id="freqInput" rows="2" placeholder="Ejemplo: 5, 8, 2"></textarea>
+            </div>
+
             <p id="dataStatus" style="color: #333;"></p>
         </div>
 
@@ -202,6 +261,7 @@
             <button class="tab-btn-stats active" data-tab="resumen">Resumen y Centralidad</button>
             <button class="tab-btn-stats" data-tab="dispersion">Dispersión</button>
             <button class="tab-btn-stats" data-tab="posicion">Posición (Cuartiles, Deciles)</button>
+            <button class="tab-btn-stats" data-tab="frecuencias">Frecuencias y Gráficas</button>
         </div>
 
         <div class="tab-content-stats">
@@ -225,14 +285,131 @@
                     <p>Ingresa datos para ver las medidas de posición.</p>
                 </div>
             </div>
+
+            <div id="frecuencias" class="tab-pane-stats">
+                <h3>Tabla de Frecuencias y Gráfico</h3>
+                <div id="freqTableContainer">
+                    <p>Calcula los datos para ver la tabla.</p>
+                </div>
+                <div id="chartContainer" style="position: relative; height:40vh; width:100%">
+                    <canvas id="chartCanvas"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        let datos = [];
+        // Variables globales
+        let datosSimples = [];
+        let clasesAgrupadas = []; // Contiene objetos {li, ls, f, Xm}
+        let myChart; // Variable global para la instancia de Chart.js
 
         // =======================================================
-        // 🧮 FUNCIONES DE CÁLCULO ESTADÍSTICO
+        // ⚙️ CONTROL DE INTERFAZ
+        // =======================================================
+
+        function toggleInputMode() {
+            const type = document.getElementById('dataType').value;
+            document.getElementById('simpleInput').style.display = type === 'simple' ? 'block' : 'none';
+            document.getElementById('groupedInput').style.display = type === 'grouped' ? 'block' : 'none';
+            limpiarResultados();
+
+            // Limpiar datos al cambiar de modo para evitar conflictos
+            datosSimples = [];
+            clasesAgrupadas = [];
+        }
+
+        function limpiarResultados() {
+            document.getElementById('resumenResults').innerHTML = '<p>Ingresa datos para ver el resumen.</p>';
+            document.getElementById('dispersionResults').innerHTML = '<p>Ingresa datos para ver la dispersión.</p>';
+            document.getElementById('posicionResults').innerHTML = '<p>Ingresa datos para ver las medidas de posición.</p>';
+            document.getElementById('freqTableContainer').innerHTML = '<p>Calcula los datos para ver la tabla.</p>';
+
+            // Destruir el gráfico anterior si existe
+            if (myChart) {
+                myChart.destroy();
+            }
+        }
+
+        // =======================================================
+        // 🧠 PROCESAMIENTO CENTRAL DE DATOS
+        // =======================================================
+
+        function procesarDatos() {
+            const type = document.getElementById('dataType').value;
+            const dataStatus = document.getElementById('dataStatus');
+            dataStatus.textContent = '';
+
+            if (type === 'simple') {
+                procesarSimple();
+            } else {
+                procesarAgrupado();
+            }
+
+            if (datosSimples.length > 0 || clasesAgrupadas.length > 0) {
+                calcularYMostrarResultados(type);
+            } else {
+                limpiarResultados();
+            }
+        }
+
+        function procesarSimple() {
+            const dataInput = document.getElementById('dataInput').value;
+            const valores = dataInput.split(',')
+                .map(s => s.trim())
+                .filter(s => s !== '')
+                .map(s => parseFloat(s));
+
+            datosSimples = valores.filter(n => !isNaN(n)).sort((a, b) => a - b);
+            clasesAgrupadas = [];
+
+            if (datosSimples.length === 0) {
+                document.getElementById('dataStatus').textContent = "❌ Error (Simple): Por favor, ingrese al menos un número válido.";
+                return;
+            }
+            document.getElementById('dataStatus').textContent = `✅ Datos Simples procesados: ${datosSimples.length} valores.`;
+        }
+
+        function procesarAgrupado() {
+            const intervalInput = document.getElementById('intervalInput').value;
+            const freqInput = document.getElementById('freqInput').value;
+
+            const intervalosStr = intervalInput.split(',').map(s => s.trim()).filter(s => s !== '');
+            const frecuencias = freqInput.split(',').map(s => s.trim()).filter(s => s !== '').map(f => parseInt(f)).filter(n => !isNaN(n) && n > 0);
+
+            if (intervalosStr.length === 0 || frecuencias.length === 0 || intervalosStr.length !== frecuencias.length) {
+                document.getElementById('dataStatus').textContent = "❌ Error (Agrupado): Asegúrese de ingresar intervalos y frecuencias válidas y que coincidan en cantidad.";
+                clasesAgrupadas = [];
+                datosSimples = [];
+                return;
+            }
+
+            clasesAgrupadas = intervalosStr.map((intervaloStr, index) => {
+                const limites = intervaloStr.split('-').map(l => parseFloat(l));
+
+                if (limites.length !== 2 || isNaN(limites[0]) || isNaN(limites[1])) {
+                    return null;
+                }
+                const li = Math.min(limites[0], limites[1]);
+                const ls = Math.max(limites[0], limites[1]);
+                const Xm = (li + ls) / 2;
+
+                return { li, ls, f: frecuencias[index], Xm };
+            }).filter(clase => clase !== null);
+
+            datosSimples = [];
+
+            if (clasesAgrupadas.length !== intervalosStr.length) {
+                document.getElementById('dataStatus').textContent = "❌ Error (Agrupado): Formato de intervalo incorrecto en una o más entradas (use 'LímiteInf-LímiteSup').";
+                clasesAgrupadas = [];
+                return;
+            }
+
+            document.getElementById('dataStatus').textContent = `✅ Datos Agrupados procesados: ${clasesAgrupadas.length} clases.`;
+        }
+
+        // =======================================================
+        // 💡 FUNCIONES DE CÁLCULO ESTADÍSTICO (Completas)
         // =======================================================
 
         function calcularMedia(arr) {
@@ -244,20 +421,11 @@
         function calcularMediana(arr) {
             const n = arr.length;
             if (n === 0) return 0;
-
-            if (n % 2 !== 0) {
-                return arr[Math.floor(n / 2)];
-            }
-            else {
-                const mid1 = arr[n / 2 - 1];
-                const mid2 = arr[n / 2];
-                return (mid1 + mid2) / 2;
-            }
+            return n % 2 !== 0 ? arr[Math.floor(n / 2)] : (arr[n / 2 - 1] + arr[n / 2]) / 2;
         }
 
         function calcularModa(arr) {
             if (arr.length === 0) return 'N/A';
-
             const frecuencia = {};
             let maxFrecuencia = 0;
             let modas = [];
@@ -268,21 +436,12 @@
                     maxFrecuencia = frecuencia[num];
                 }
             }
-
             for (const num in frecuencia) {
                 if (frecuencia[num] === maxFrecuencia) {
                     modas.push(parseFloat(num));
                 }
             }
-
-            if (maxFrecuencia === 1) {
-                return 'No hay moda clara (todos los valores son únicos)';
-            }
-            if (modas.length === arr.length) {
-                return 'Multimodal (todos ocurren con la misma frecuencia)';
-            }
-
-            return modas.map(m => m.toFixed(3)).join(', ');
+            return maxFrecuencia === 1 ? 'No hay moda clara' : modas.map(m => m.toFixed(3)).join(', ');
         }
 
         function calcularRango(arr) {
@@ -292,261 +451,384 @@
 
         function calcularVarianzaPoblacional(arr, media) {
             if (arr.length === 0) return 0;
-
-            const sumatoriaDiferenciasCuadrado = arr.reduce((acc, val) => {
-                const diferencia = val - media;
-                return acc + diferencia * diferencia;
-            }, 0);
-
+            const sumatoriaDiferenciasCuadrado = arr.reduce((acc, val) => acc + Math.pow(val - media, 2), 0);
             return sumatoriaDiferenciasCuadrado / arr.length;
         }
 
-        function calcularVarianzaMuestral(arr, media) {
-            if (arr.length <= 1) return NaN;
-
-            const sumatoriaDiferenciasCuadrado = arr.reduce((acc, val) => {
-                const diferencia = val - media;
-                return acc + diferencia * diferencia;
-            }, 0);
-
-            return sumatoriaDiferenciasCuadrado / (arr.length - 1);
-        }
-
-        /**
-          * Calcula medidas de posición (Percentiles P) usando interpolación lineal (Tipo 7).
-          * La fórmula es: P = X_i + (k - i) * (X_{i+1} - X_i)
-          * donde k = P * (n - 1) / 100
-          * @param {number[]} arr - El conjunto de datos ordenado.
-          * @param {number} p - El percentil deseado (de 0 a 100).
-          * @returns {number} El valor del percentil.
-          */
         function calcularPosicion(arr, p) {
             if (arr.length === 0) return 0;
             if (p <= 0) return arr[0];
             if (p >= 100) return arr[arr.length - 1];
 
             const n = arr.length;
-            // Posición K = p * (n - 1) / 100
             const k = (p / 100) * (n - 1);
-
-            const i = Math.floor(k); // Índice inferior
-            const f = k - i;         // Parte fraccionaria (k - i)
+            const i = Math.floor(k);
+            const f = k - i;
 
             if (i >= n - 1) return arr[n - 1];
-
-            // Interpolación: Valor = arr[i] + f * (arr[i+1] - arr[i])
             return arr[i] + f * (arr[i + 1] - arr[i]);
         }
 
-        // Función auxiliar para generar la fórmula de posición para un Percentil P
+        function calcularMediaAgrupada(clases) {
+            if (clases.length === 0) return 0;
+            const N = clases.reduce((sum, c) => sum + c.f, 0);
+            if (N === 0) return 0;
+            const sumFXm = clases.reduce((sum, c) => sum + (c.f * c.Xm), 0);
+            return sumFXm / N;
+        }
+
+        function calcularVarianzaAgrupada(clases, media) {
+            if (clases.length === 0) return 0;
+            const N = clases.reduce((sum, c) => sum + c.f, 0);
+            if (N === 0) return 0;
+
+            const sumatoria = clases.reduce((sum, c) => {
+                const diferencia = c.Xm - media;
+                return sum + c.f * (diferencia * diferencia);
+            }, 0);
+
+            return sumatoria / N;
+        }
+
+        function calcularIntervalo(clases) {
+            if (clases.length < 2) return (clases.length > 0) ? clases[0].ls - clases[0].li : 0;
+            return clases[1].li - clases[0].li;
+        }
+
         function getFormulaPosicion(p) {
-            // El cuartil Q1 es el percentil P25. El decil D1 es el P10.
             return `P = ${p} (donde k = ${p}*(n-1)/100)`;
         }
 
-
         // =======================================================
-        // 💻 FUNCIONES DE INTERFAZ Y PROCESAMIENTO
+        // 🎨 FUNCIÓN DE DIBUJO CHART.JS (NUEVA)
         // =======================================================
 
-        function limpiarResultados() {
-            document.getElementById('resumenResults').innerHTML = '<p>Ingresa datos para ver el resumen.</p>';
-            document.getElementById('dispersionResults').innerHTML = '<p>Ingresa datos para ver la dispersión.</p>';
-            document.getElementById('posicionResults').innerHTML = '<p>Ingresa datos para ver las medidas de posición.</p>';
-        }
+        function crearGraficoChartJS(labels, data, tipoSerie) {
+            const ctx = document.getElementById('chartCanvas').getContext('2d');
 
-        function calcularYMostrarResultados() {
-            if (datos.length === 0) {
-                limpiarResultados();
-                return;
+            // Destruir el gráfico anterior si existe
+            if (myChart) {
+                myChart.destroy();
             }
 
-            // 1. CÁLCULOS PRINCIPALES
-            const media = calcularMedia(datos);
-            const mediana = calcularMediana(datos);
-            const moda = calcularModa(datos);
-            const rango = calcularRango(datos);
-            const varianzaP = calcularVarianzaPoblacional(datos, media);
-            const desvTipicaP = Math.sqrt(varianzaP);
-            const varianzaM = calcularVarianzaMuestral(datos, media);
-            const desvTipicaM = Math.sqrt(varianzaM);
-            const coeficienteVariacion = media === 0 ? 'N/A' : (desvTipicaM / media * 100);
+            const isGrouped = tipoSerie === 'grouped';
 
-            // 2. CÁLCULOS DE POSICIÓN
-            const q1 = calcularPosicion(datos, 25);
-            const q2 = calcularPosicion(datos, 50);
-            const q3 = calcularPosicion(datos, 75);
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: isGrouped ? 'Frecuencia (f) por Punto Medio (Xm)' : 'Frecuencia de Valores',
+                        data: data,
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)', // Azul primario
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1,
+                        barPercentage: isGrouped ? 1.0 : 0.9, // Para Histogramas, la barra ocupa todo el espacio
+                        categoryPercentage: 1.0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Frecuencia (f)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: isGrouped ? 'Punto Medio (Xm)' : 'Valores'
+                            },
+                            // Configuración para el Histograma (series agrupadas)
+                            grid: {
+                                offset: false // Esto asegura que las barras se alineen con las etiquetas si son anchas
+                            },
+                            ticks: {
+                                autoSkip: true,
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        title: {
+                            display: true,
+                            text: isGrouped ? 'Histograma / Polígono de Frecuencia (Frec. vs Xm)' : 'Gráfico de Barras por Frecuencia'
+                        }
+                    }
+                }
+            });
+        }
+
+        // =======================================================
+        // 📝 GENERACIÓN DE RESULTADOS
+        // =======================================================
+
+        function calcularYMostrarResultados(type) {
+            if (type === 'simple') {
+                mostrarResultadosSimple();
+            } else {
+                mostrarResultadosAgrupados();
+            }
+        }
+
+        function mostrarResultadosSimple() {
+            const arr = datosSimples;
+            const n = arr.length;
+
+            // Cálculos
+            const media = calcularMedia(arr);
+            const varianzaP = calcularVarianzaPoblacional(arr, media);
+            const desvTipicaP = Math.sqrt(varianzaP);
+            const mediana = calcularMediana(arr);
+            const moda = calcularModa(arr);
+            const rango = calcularRango(arr);
+            const q1 = calcularPosicion(arr, 25);
+            const q2 = calcularPosicion(arr, 50);
+            const q3 = calcularPosicion(arr, 75);
             const iqr = q3 - q1;
 
-            // Deciles D1 a D9
             const deciles = Array.from({ length: 9 }, (_, i) => ({
                 label: `D${i + 1} (P${(i + 1) * 10})`,
-                value: calcularPosicion(datos, (i + 1) * 10),
+                value: calcularPosicion(arr, (i + 1) * 10),
                 percentil: (i + 1) * 10
             }));
 
-            const n = datos.length;
-            const min = datos[0];
-            const max = datos[n - 1];
+            const formulaBasePercentil = `P = Dato_i + Fracción * (Dato_{i+1} - Dato_i)`;
 
-            // --- PESTAÑA 1: RESUMEN GENERAL ---
+            // --- PESTAÑA 1: RESUMEN GENERAL (Simple) ---
             const resumenHTML = `
-                <div>
-                    <strong>Total de Datos (n)</strong>${n}
-                    <span class="formula">n = Cantidad de valores</span>
-                </div>
-                <div>
-                    <strong>Mínimo (Min)</strong>${min.toFixed(3)}
-                    <span class="formula">Min = Dato menor en el conjunto</span>
-                </div>
-                <div>
-                    <strong>Máximo (Max)</strong>${max.toFixed(3)}
-                    <span class="formula">Max = Dato mayor en el conjunto</span>
-                </div>
-                <div>
-                    <strong>Rango (R)</strong>${rango.toFixed(3)}
-                    <span class="formula">R = Max - Min</span>
-                </div>
-                <div>
-                    <strong>Media (μ o x̄)</strong>${media.toFixed(3)}
-                    <span class="formula">μ = (Σx) / n</span>
-                </div>
-                <div>
-                    <strong>Mediana (Me)</strong>${mediana.toFixed(3)}
-                    <span class="formula">Me = Valor central (o promedio de los 2 centrales)</span>
-                </div>
-                <div>
-                    <strong>Moda (Mo)</strong>${moda}
-                    <span class="formula">Mo = Dato con mayor frecuencia</span>
-                </div>
+                <div><strong>Total de Datos (n)</strong>${n}<span class="formula">n = Cantidad de valores</span></div>
+                <div><strong>Mínimo (Min)</strong>${arr[0].toFixed(3)}<span class="formula">Min = Dato menor</span></div>
+                <div><strong>Máximo (Max)</strong>${arr[n - 1].toFixed(3)}<span class="formula">Max = Dato mayor</span></div>
+                <div><strong>Rango (R)</strong>${rango.toFixed(3)}<span class="formula">R = Max - Min</span></div>
+                <div><strong>Media (x̄)</strong>${media.toFixed(3)}<span class="formula">x̄ = (Σx) / n</span></div>
+                <div><strong>Mediana (Me)</strong>${mediana.toFixed(3)}<span class="formula">Me = Valor central</span></div>
+                <div><strong>Moda (Mo)</strong>${moda}<span class="formula">Mo = Dato con mayor frecuencia</span></div>
             `;
             document.getElementById('resumenResults').innerHTML = resumenHTML;
 
 
-            // --- PESTAÑA 2: DISPERSIÓN ---
+            // --- PESTAÑA 2: DISPERSIÓN (Simple) ---
             const dispersionHTML = `
-                <div>
-                    <strong>Varianza Poblacional (σ²)</strong>${varianzaP.toFixed(3)}
-                    <span class="formula">σ² = Σ(x - μ)² / n</span>
-                </div>
-                <div>
-                    <strong>Desviación Típica Poblacional (σ)</strong>${desvTipicaP.toFixed(3)}
-                    <span class="formula">σ = &radic;(σ²)</span>
-                </div>
-                <div>
-                    <strong>Varianza Muestral (s²)</strong>
-                        ${n <= 1 ? 'N/A' : varianzaM.toFixed(3)}
-                    <span class="formula">s² = Σ(x - x̄)² / (n - 1)</span>
-                </div>
-                <div>
-                    <strong>Desviación Típica Muestral (s)</strong>
-                        ${n <= 1 ? 'N/A' : desvTipicaM.toFixed(3)}
-                    <span class="formula">s = &radic;(s²)</span>
-                </div>
-                <div>
-                    <strong>Coeficiente de Variación (%)</strong>
-                        ${coeficienteVariacion === 'N/A' ? 'N/A' : coeficienteVariacion.toFixed(2) + ' %'}
-                    <span class="formula">CV = (s / x̄) * 100</span>
-                </div>
-                <div>
-                    <strong>Rango Intercuartílico (IQR)</strong>
-                        ${iqr.toFixed(3)}
-                    <span class="formula">IQR = Q3 - Q1</span>
-                </div>
+                <div><strong>Varianza Poblacional (σ²)</strong>${varianzaP.toFixed(3)}<span class="formula">σ² = Σ(x - x̄)² / n</span></div>
+                <div><strong>Desviación Típica (σ)</strong>${desvTipicaP.toFixed(3)}<span class="formula">σ = &radic;(σ²)</span></div>
+                <div><strong>Rango Intercuartílico (IQR)</strong>${iqr.toFixed(3)}<span class="formula">IQR = Q3 - Q1</span></div>
             `;
             document.getElementById('dispersionResults').innerHTML = dispersionHTML;
 
 
-            // --- PESTAÑA 3: POSICIÓN ---
+            // --- PESTAÑA 3: POSICIÓN (Simple) ---
             let posicionHTML = `
                 <div style="grid-column: 1 / -1; margin-bottom: 5px;">
                     <h3>Cuartiles (P: 25, 50, 75)</h3>
-                    <p style="font-size: 0.9em; color: #7f8c8d;">
-                        Fórmula Base para Cuartiles y Deciles (Percentil P): 
-                        <span class="formula" style="color: #3498db; display: inline;">P = Dato_i + Fracción * (Dato_{i+1} - Dato_i)</span> 
-                        <span style="font-size: 0.8em; color: #95a5a6;">(Se usa el método de interpolación lineal, donde P se convierte a un índice)</span>
-                    </p>
+                    <p style="font-size: 0.9em; color: #7f8c8d;">Fórmula Base para Percentiles P: <span class="formula" style="color: #3498db; display: inline;">${formulaBasePercentil}</span></p>
                 </div>
-                <div>
-                    <strong>Q1 (P25)</strong>${q1.toFixed(3)}
-                    <span class="formula">${getFormulaPosicion(25)}</span>
-                </div>
-                <div>
-                    <strong>Q2 (Mediana/P50)</strong>${q2.toFixed(3)}
-                    <span class="formula">${getFormulaPosicion(50)}</span>
-                </div> 
-                <div>
-                    <strong>Q3 (P75)</strong>${q3.toFixed(3)}
-                    <span class="formula">${getFormulaPosicion(75)}</span>
-                </div>
-
+                <div><strong>Q1 (P25)</strong>${q1.toFixed(3)}<span class="formula">${getFormulaPosicion(25)}</span></div>
+                <div><strong>Q2 (Mediana/P50)</strong>${q2.toFixed(3)}<span class="formula">${getFormulaPosicion(50)}</span></div> 
+                <div><strong>Q3 (P75)</strong>${q3.toFixed(3)}<span class="formula">${getFormulaPosicion(75)}</span></div>
                 <div style="grid-column: 1 / -1;"><h3>Deciles (D1 a D9)</h3></div>
                 ${deciles.map(d => `
-                    <div>
-                        <strong>${d.label}</strong>${d.value.toFixed(3)}
-                        <span class="formula">${getFormulaPosicion(d.percentil)}</span>
-                    </div>
+                    <div><strong>${d.label}</strong>${d.value.toFixed(3)}<span class="formula">${getFormulaPosicion(d.percentil)}</span></div>
                 `).join('')}
             `;
             document.getElementById('posicionResults').innerHTML = posicionHTML;
+
+            // --- PESTAÑA 4: FRECUENCIAS (Simple) ---
+            const frecuencias = {};
+            arr.forEach(val => {
+                frecuencias[val] = (frecuencias[val] || 0) + 1;
+            });
+
+            const labels = Object.keys(frecuencias).map(k => parseFloat(k).toFixed(2));
+            const data = Object.values(frecuencias);
+
+            // LLAMADA PARA CREAR EL GRÁFICO
+            crearGraficoChartJS(labels, data, 'simple');
+
+            const tableHTML = `
+                <h4>Frecuencias de Valores Únicos</h4>
+                <table id="freqTable">
+                    <thead>
+                        <tr><th>Valor (X)</th><th>Frecuencia (f)</th></tr>
+                    </thead>
+                    <tbody>
+                        ${labels.map((label, i) => `
+                            <tr><td>${label}</td><td>${data[i]}</td></tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <p style="margin-top: 15px; color: #2980b9;">**Base para Gráfico de Barras:**</p>
+                <div class="chart-data">
+                    <p>Eje X (Valores):</p>
+                    <pre><code>${JSON.stringify(labels)}</code></pre>
+                    <p>Eje Y (Frecuencias):</p>
+                    <pre><code>${JSON.stringify(data)}</code></pre>
+                </div>
+            `;
+            document.getElementById('freqTableContainer').innerHTML = tableHTML;
         }
 
-        function procesarDatos() {
-            const dataInput = document.getElementById('dataInput').value;
-            const dataStatus = document.getElementById('dataStatus');
+        function mostrarResultadosAgrupados() {
+            const clases = clasesAgrupadas;
+            const N = clases.reduce((sum, c) => sum + c.f, 0);
+            const numClases = clases.length;
 
-            // Limpiar y validar datos
-            const valores = dataInput.split(',')
-                .map(s => s.trim())
-                .filter(s => s !== '')
-                .map(s => parseFloat(s))
-                .filter(n => !isNaN(n));
+            // Cálculos
+            const mediaAgrupada = calcularMediaAgrupada(clases);
+            const varianzaAgrupada = calcularVarianzaAgrupada(clases, mediaAgrupada);
+            const desvTipicaAgrupada = Math.sqrt(varianzaAgrupada);
+            const intervalo = calcularIntervalo(clases);
 
-            if (valores.length === 0) {
-                dataStatus.textContent = "❌ Error: Por favor, ingrese al menos un número válido.";
-                datos = [];
-                limpiarResultados();
-                return;
-            }
+            // Fórmulas de medidas avanzadas (no se calculan, solo se muestran las fórmulas)
+            const formulaMediana = `Me = Li + [ (N/2 - Fa-1) / f_me ] * i`;
+            const formulaModa = `Mo = Li + [ (d1) / (d1 + d2) ] * i`;
+            const formulaPosAgrupado = (P) => `P${P} = Li + [ (P*N/100 - Fa-1) / f_p ] * i`;
 
-            if (valores.some(n => isNaN(n))) {
-                dataStatus.textContent = "⚠️ Advertencia: Se omitieron algunos valores no numéricos.";
-            } else {
-                dataStatus.textContent = `Datos procesados: ${valores.length} valores.`;
-            }
+            // Preparar tabla de frecuencias con cálculos adicionales
+            let Fa_acumulada = 0;
+            const clasesConFrecuencias = clases.map(c => {
+                Fa_acumulada += c.f;
+                return {
+                    ...c,
+                    Fa: Fa_acumulada,
+                    fr: c.f / N,
+                    frp: (c.f / N) * 100
+                };
+            });
 
-            // Almacenar datos y ordenarlos (ESENCIAL)
-            datos = valores.sort((a, b) => a - b);
+            // --- PESTAÑA 1: RESUMEN GENERAL (Agrupado) ---
+            const resumenHTML = `
+                <div><strong>Total de Clases (k)</strong>${numClases}<span class="formula">k = Cantidad de filas</span></div>
+                <div><strong>Tamaño Muestral (N)</strong>${N}<span class="formula">N = Σf</span></div>
+                <div><strong>Media Agrupada (x̄)</strong>${mediaAgrupada.toFixed(3)}<span class="formula">x̄ = Σ(f * Xm) / N</span></div>
+                <div><strong>Intervalo (i)</strong>${intervalo.toFixed(3)}<span class="formula">i = Ls - Li (o diferencia entre Xm)</span></div>
+                <div><strong>Punto Medio (Xm)</strong>(Ver tabla)<span class="formula">Xm = (Li + Ls) / 2</span></div>
+                <div><strong>Mediana (Me)</strong>N/A (Fórmula Avanzada)<span class="formula">${formulaMediana}</span></div>
+                <div><strong>Moda (Mo)</strong>N/A (Fórmula Avanzada)<span class="formula">${formulaModa}</span></div>
+            `;
+            document.getElementById('resumenResults').innerHTML = resumenHTML;
 
-            // Llamar a la función principal de cálculo y presentación
-            calcularYMostrarResultados();
+
+            // --- PESTAÑA 2: DISPERSIÓN (Agrupado) ---
+            const dispersionHTML = `
+                <div><strong>Varianza Poblacional (σ²)</strong>${varianzaAgrupada.toFixed(3)}<span class="formula">σ² = Σ[f * (Xm - x̄)²] / N</span></div>
+                <div><strong>Desviación Típica (σ)</strong>${desvTipicaAgrupada.toFixed(3)}<span class="formula">σ = &radic;(σ²)</span></div>
+                <div><strong>Rango Aprox.</strong>${(clases[numClases - 1].ls - clases[0].li).toFixed(3)}<span class="formula">R = Ls_max - Li_min</span></div>
+            `;
+            document.getElementById('dispersionResults').innerHTML = dispersionHTML;
+
+
+            // --- PESTAÑA 3: POSICIÓN (Agrupado) ---
+            let posicionHTML = `
+                <div style="grid-column: 1 / -1; margin-bottom: 5px;">
+                    <h3>Fórmulas de Posición para Datos Agrupados</h3>
+                    <p style="font-size: 0.9em; color: #7f8c8d;">Para datos agrupados, el cálculo del percentil (Q, D, P) se hace por **interpolación** en la tabla de frecuencias.</p>
+                </div>
+                <div><strong>Q1 (P25)</strong>N/A<span class="formula">${formulaPosAgrupado(25)}</span></div>
+                <div><strong>Q2 (Mediana/P50)</strong>N/A<span class="formula">${formulaPosAgrupado(50)}</span></div> 
+                <div><strong>Q3 (P75)</strong>N/A<span class="formula">${formulaPosAgrupado(75)}</span></div>
+                <div style="grid-column: 1 / -1;"><h3>Deciles (D1 a D9)</h3></div>
+                <div><strong>D1 (P10)</strong>N/A<span class="formula">${formulaPosAgrupado(10)}</span></div>
+                <div><strong>D5 (P50)</strong>N/A<span class="formula">${formulaPosAgrupado(50)}</span></div>
+                <div><strong>D9 (P90)</strong>N/A<span class="formula">${formulaPosAgrupado(90)}</span></div>
+            `;
+            document.getElementById('posicionResults').innerHTML = posicionHTML;
+
+            // --- PESTAÑA 4: FRECUENCIAS Y GRÁFICAS (Agrupado) ---
+
+            // Base de datos para gráficas
+            const labelsXm = clasesConFrecuencias.map(c => c.Xm.toFixed(3));
+            const dataF = clasesConFrecuencias.map(c => c.f);
+            const dataFa = clasesConFrecuencias.map(c => c.Fa);
+            const labelsLs = clasesConFrecuencias.map(c => c.ls.toFixed(3));
+
+            // LLAMADA PARA CREAR EL GRÁFICO (Histograma/Polígono)
+            crearGraficoChartJS(labelsXm, dataF, 'grouped');
+
+            let tableHTML = `
+                <h4>Tabla de Frecuencias Agrupadas (Base para Gráficas)</h4>
+                <table id="freqTable">
+                    <thead>
+                        <tr>
+                            <th>Clase</th>
+                            <th>Punto Medio (Xm)</th>
+                            <th>Frecuencia (f)</th>
+                            <th>Frec. Acum. (Fa)</th>
+                            <th>Frec. Rel. % (fr%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${clasesConFrecuencias.map(c => `
+                            <tr>
+                                <td>${c.li.toFixed(2)} - ${c.ls.toFixed(2)}</td>
+                                <td>${c.Xm.toFixed(3)}</td>
+                                <td>${c.f}</td>
+                                <td>${c.Fa}</td>
+                                <td>${c.frp.toFixed(2)}%</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2">**TOTAL**</td>
+                            <td>**${N}**</td>
+                            <td></td>
+                            <td>**${100.0}%**</td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <p style="margin-top: 15px; color: #2980b9;">**Base de Datos para Gráficas:**</p>
+                <div class="chart-data">
+                    <p>
+                        **1. Histograma/Polígono (Gráfico Actual):** Eje X = Puntos Medios (Xm); Eje Y = Frecuencia (f)
+                    </p>
+                    <p>Eje X (Puntos Medios): <pre><code>${JSON.stringify(labelsXm)}</code></pre></p>
+                    <p>Eje Y (Frecuencias f): <pre><code>${JSON.stringify(dataF)}</code></pre></p>
+
+                    <hr>
+
+                    <p>
+                        **2. Ojiva (Frecuencia Acumulada - Para Gráfico de Línea):** Eje X = Límites Superiores (Ls); Eje Y = Frecuencia Acumulada (Fa)
+                    </p>
+                    <p>Eje X (Límites Superiores): <pre><code>${JSON.stringify(labelsLs)}</code></pre></p>
+                    <p>Eje Y (Frecuencias Acumuladas Fa): <pre><code>${JSON.stringify(dataFa)}</code></pre></p>
+                </div>
+            `;
+            document.getElementById('freqTableContainer').innerHTML = tableHTML;
         }
 
-        // 4. Control de Pestañas (Se mantiene)
+
+        // 5. Control de Pestañas
         document.addEventListener('DOMContentLoaded', () => {
+            toggleInputMode();
             const tabControls = document.querySelector('.tab-controls-stats');
             if (tabControls) {
                 tabControls.addEventListener('click', (e) => {
                     if (e.target.classList.contains('tab-btn-stats')) {
                         const targetTab = e.target.dataset.tab;
 
-                        // Desactivar todos los botones y paneles
                         document.querySelectorAll('.tab-btn-stats').forEach(btn => btn.classList.remove('active'));
                         document.querySelectorAll('.tab-pane-stats').forEach(pane => pane.classList.remove('active'));
 
-                        // Activar el botón y el panel objetivo
                         e.target.classList.add('active');
                         document.getElementById(targetTab).classList.add('active');
 
-                        // Si ya hay datos, recalcular y mostrar para asegurar que el contenido se actualice al cambiar de pestaña
-                        if (datos.length > 0) {
-                            calcularYMostrarResultados();
+                        // Recalcular
+                        const type = document.getElementById('dataType').value;
+                        if (datosSimples.length > 0 || clasesAgrupadas.length > 0) {
+                            calcularYMostrarResultados(type);
                         }
                     }
                 });
             }
-
-            // Asegurar que la primera pestaña esté activa al inicio
             document.getElementById('resumen').classList.add('active');
         });
     </script>
