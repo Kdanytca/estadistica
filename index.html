@@ -488,8 +488,8 @@
         }
 
         /* =========================
-          Serie Agrupada (intervalos)
-        =========================*/
+  Serie Agrupada (intervalos)
+=========================*/
         function procesarAgrupado() {
             const interRaw = document.getElementById('intervalInput').value.trim();
             const freqRaw = document.getElementById('freqInput').value.trim();
@@ -593,71 +593,138 @@
 
             // Resumen
             document.getElementById('resumenResults').innerHTML = `
-                <div class="card"><strong>Media Agrupada (x̄)</strong>${isFinite(media) ? media.toFixed(3) : 'N/A'}</div>
-                <div class="card"><strong>Mediana (Me)</strong>${mediana !== null ? mediana.toFixed(3) : 'N/A'}</div>
-                <div class="card"><strong>Moda (Mo)</strong>${isFinite(moda) ? (Number.isFinite(moda) ? moda.toFixed(3) : moda) : 'N/A'}</div>
-            `;
+        <div class="card"><strong>Media Agrupada (x̄)</strong>${isFinite(media) ? media.toFixed(3) : 'N/A'}</div>
+        <div class="card"><strong>Mediana (Me)</strong>${mediana !== null ? mediana.toFixed(3) : 'N/A'}</div>
+        <div class="card"><strong>Moda (Mo)</strong>${isFinite(moda) ? (Number.isFinite(moda) ? moda.toFixed(3) : moda) : 'N/A'}</div>
+    `;
 
             // Dispersión (NUEVA ESTRUCTURA)
             document.getElementById('dispersionResults').innerHTML = `
-                <div class="card"><strong>Rango (R)</strong>${rango.toFixed(3)}</div>
-                <div class="card"><strong>Amplitud (i)</strong>${intervalo_i.toFixed(3)}</div>
-                <div class="card"><strong>Desviación Media (DM)</strong>${dm.toFixed(3)}</div>
-                <div class="card"><strong>Varianza (σ²)</strong>${isFinite(varianza) ? varianza.toFixed(3) : 'N/A'}</div>
-                <div class="card"><strong>Desviación Estándar (σ)</strong>${isFinite(desviacion) ? desviacion.toFixed(3) : 'N/A'}</div>
-            `;
+        <div class="card"><strong>Rango (R)</strong>${rango.toFixed(3)}</div>
+        <div class="card"><strong>Amplitud (i)</strong>${intervalo_i.toFixed(3)}</div>
+        <div class="card"><strong>Desviación Media (DM)</strong>${dm.toFixed(3)}</div>
+        <div class="card"><strong>Varianza (σ²)</strong>${isFinite(varianza) ? varianza.toFixed(3) : 'N/A'}</div>
+        <div class="card"><strong>Desviación Estándar (σ)</strong>${isFinite(desviacion) ? desviacion.toFixed(3) : 'N/A'}</div>
+    `;
 
             // Posición (Cuartiles, Deciles y Percentiles - ESTRUCTURADO)
             let posicionHTML = `
-                <h4 class="section-title">Punto Medio y Amplitud</h4>
-                <div class="results-grid">
-                    <div class="card"><strong>Promedio de Puntos Medios (P̄m)</strong>${pm_avg.toFixed(3)}</div>
-                    <div class="card"><strong>Amplitud del Intervalo (i)</strong>${intervalo_i.toFixed(3)}</div>
-                </div>
+        <h4 class="section-title">Punto Medio y Amplitud</h4>
+        <div class="results-grid">
+            <div class="card"><strong>Promedio de Puntos Medios (P̄m)</strong>${pm_avg.toFixed(3)}</div>
+            <div class="card"><strong>Amplitud del Intervalo (i)</strong>${intervalo_i.toFixed(3)}</div>
+        </div>
 
-                <h4 class="section-title">Cuartiles (Q)</h4>
-                <div class="results-grid">
-                    <div class="card"><strong>Q1</strong>${q1 !== null ? q1.toFixed(3) : 'N/A'}</div>
-                    <div class="card"><strong>Q2 (Me)</strong>${mediana !== null ? mediana.toFixed(3) : 'N/A'}</div>
-                    <div class="card"><strong>Q3</strong>${q3 !== null ? q3.toFixed(3) : 'N/A'}</div>
-                </div>
+        <h4 class="section-title">Cuartiles (Q)</h4>
+        <div class="results-grid">
+            <div class="card"><strong>Q1</strong>${q1 !== null ? q1.toFixed(3) : 'N/A'}</div>
+            <div class="card"><strong>Q2 (Me)</strong>${mediana !== null ? mediana.toFixed(3) : 'N/A'}</div>
+            <div class="card"><strong>Q3</strong>${q3 !== null ? q3.toFixed(3) : 'N/A'}</div>
+        </div>
 
-                <h4 class="section-title">Deciles (D)</h4>
-                <div class="results-grid">
-                    ${deciles.map((d, i) => `<div class="card"><strong>D${i + 1}</strong>${d !== null ? d.toFixed(3) : 'N/A'}</div>`).join('')}
-                </div>
+        <h4 class="section-title">Deciles (D)</h4>
+        <div class="results-grid">
+            ${deciles.map((d, i) => `<div class="card"><strong>D${i + 1}</strong>${d !== null ? d.toFixed(3) : 'N/A'}</div>`).join('')}
+        </div>
 
-                <h4 class="section-title">Otros Percentiles (P)</h4>
-                <div class="results-grid">
-                    <div class="card"><strong>P95</strong>${p95 !== null ? p95.toFixed(3) : 'N/A'}</div>
-                </div>
-            `;
+        <h4 class="section-title">Otros Percentiles (P)</h4>
+        <div class="results-grid">
+            <div class="card"><strong>P95</strong>${p95 !== null ? p95.toFixed(3) : 'N/A'}</div>
+        </div>
+    `;
             document.getElementById('posicionResults').innerHTML = posicionHTML;
 
-            // Tabla de frecuencias (mostrando Fa y Pm)
-            let table = `<h4>Tabla de Frecuencias Agrupadas</h4>
-                <table id="freqTable">
-                    <thead><tr><th>Clase (L<sub>i</sub> - L<sub>s</sub>)</th><th>f</th><th>F<sub>a</sub></th><th>Punto medio (X<sub>m</sub>)</th><th>fr %</th></tr></thead>
-                    <tbody>`;
-            for (let idx = 0; idx < clases.length; idx++) {
-                const c = clases[idx];
-                const frp = (frecs[idx] / N) * 100;
+            // =========================================================================
+            // TABLA DE FRECUENCIAS AGRUPADAS (MODIFICADA SEGÚN SOLICITUD - INCLUYE TODAS LAS SUMAS)
+            // =========================================================================
+
+            let totalPmF = 0;
+            let totalAbsDevF = 0;
+
+            // NUEVAS VARIABLES PARA TODAS LAS SUMAS
+            let totalFa = 0;
+            let totalPm = 0;
+            let totalAbsDev = 0;
+
+            // Calcular valores para la tabla
+            const tableData = clases.map((c, idx) => {
+                const f = frecs[idx];
+                const Fa_val = Fa[idx];
+                const Xm = pm[idx]; // Punto medio
+                const pmF = Xm * f; // pm * f
+                const absDev = Math.abs(Xm - media); // |pm - media|
+                const absDevF = absDev * f; // |pm - media| * f
+
+                totalPmF += pmF;
+                totalAbsDevF += absDevF;
+
+                // Acumular todas las sumas
+                totalFa += Fa_val;
+                totalPm += Xm;
+                totalAbsDev += absDev;
+
+                return {
+                    rango: `${c.li} - ${c.ls}`,
+                    f: f,
+                    Fa: Fa_val,
+                    pm: Xm,
+                    pmF: pmF,
+                    absDev: absDev,
+                    absDevF: absDevF
+                };
+            });
+
+            // Generar la tabla con los encabezados y TODOS los totales
+            let table = `<h4>Tabla de Frecuencias Agrupadas (Completa)</h4>
+        <table id="freqTable">
+            <thead>
+                <tr>
+                    <th>Rango</th>
+                    <th>f</th>
+                    <th>Fa</th>
+                    <th>pm</th>
+                    <th>pm*f</th>
+                    <th>|pm-media|</th>
+                    <th>|pm-media|*f</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+            tableData.forEach(row => {
                 table += `<tr>
-                    <td>${c.li} - ${c.ls}</td>
-                    <td>${frecs[idx]}</td>
-                    <td>${Fa[idx]}</td>
-                    <td>${pm[idx].toFixed(3)}</td>
-                    <td>${frp.toFixed(2)}%</td>
-                </tr>`;
-            }
+            <td>${row.rango}</td>
+            <td>${row.f}</td>
+            <td>${row.Fa}</td>
+            <td>${row.pm.toFixed(3)}</td>
+            <td>${row.pmF.toFixed(3)}</td>
+            <td>${row.absDev.toFixed(3)}</td>
+            <td>${row.absDevF.toFixed(3)}</td>
+        </tr>`;
+            });
+
+            // FILA DE TOTALES CON TODAS LAS SUMAS SOLICITADAS
             table += `</tbody>
-                <tfoot><tr><td colspan="2"><strong>TOTAL</strong></td><td><strong>${N}</strong></td><td></td><td><strong>100%</strong></td></tr></tfoot>
-                </table>`;
+            <tfoot>
+                <tr>
+                    <td><strong>TOTALES</strong></td>
+                    <td><strong>Σ=${N}</strong></td>
+                    <td><strong>Σ=${totalFa.toFixed(3)}</strong></td>
+                    <td><strong>Σ=${totalPm.toFixed(3)}</strong></td>
+                    <td><strong>Σ=${totalPmF.toFixed(3)}</strong></td>
+                    <td><strong>Σ=${totalAbsDev.toFixed(3)}</strong></td>
+                    <td><strong>Σ=${totalAbsDevF.toFixed(3)}</strong></td>
+                </tr>
+            </tfoot>
+        </table>`;
             document.getElementById('freqTableContainer').innerHTML = table;
 
             // Grafico (histograma + polígono + ojiva)
             renderChart(clases.map(c => `${c.li}-${c.ls}`), frecs, Fa);
             document.getElementById('dataStatus').innerHTML = `<span style="color:green">${N} datos agrupados procesados.</span>`;
+        
+        // Grafico (histograma + polígono + ojiva)
+        renderChart(clases.map(c => `${c.li}-${c.ls}`), frecs, Fa);
+        document.getElementById('dataStatus').innerHTML = `<span style="color:green">${N} datos agrupados procesados.</span>`;
         }
 
         /* =========================
